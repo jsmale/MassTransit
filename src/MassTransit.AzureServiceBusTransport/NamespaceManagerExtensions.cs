@@ -23,7 +23,24 @@ namespace MassTransit.AzureServiceBusTransport
     {
         static readonly ILog _log = Logger.Get<ServiceBusHost>();
 
-        public static async Task<QueueDescription> CreateQueueSafeAsync(this NamespaceManager namespaceManager, QueueDescription queueDescription)
+        public static async Task<QueueDescription> CreateQueueSafeAsync(this NamespaceManager namespaceManager, QueueDescription queueDescription, int retry = 0)
+        {
+            try
+            {
+                return await CreateQueueAsync(namespaceManager, queueDescription);
+            }
+            catch (MessagingException mex)
+            {
+                if (mex.IsTransient && retry < 5)
+                {
+                    await Task.Delay(30 * (retry + 1));
+                    return await CreateQueueSafeAsync(namespaceManager, queueDescription, retry + 1);
+                }
+                throw;
+            }
+        }
+
+        private static async Task<QueueDescription> CreateQueueAsync(this NamespaceManager namespaceManager, QueueDescription queueDescription)
         {
             bool create = true;
             try
@@ -79,7 +96,24 @@ namespace MassTransit.AzureServiceBusTransport
             return queueDescription;
         }
 
-        public static async Task<TopicDescription> CreateTopicSafeAsync(this NamespaceManager namespaceManager, TopicDescription topicDescription)
+        public static async Task<TopicDescription> CreateTopicSafeAsync(this NamespaceManager namespaceManager, TopicDescription topicDescription, int retry = 0)
+        {
+            try
+            {
+                return await CreateTopicAsync(namespaceManager, topicDescription);
+            }
+            catch (MessagingException mex)
+            {
+                if ((mex.IsTransient || mex.Message.Contains("(404)") || mex is MessagingEntityNotFoundException) && retry < 5)
+                {
+                    await Task.Delay(30 * (retry + 1));
+                    return await CreateTopicSafeAsync(namespaceManager, topicDescription, retry + 1);
+                }
+                throw;
+            }
+        }
+
+        private static async Task<TopicDescription> CreateTopicAsync(this NamespaceManager namespaceManager, TopicDescription topicDescription)
         {
             bool create = true;
             try
@@ -134,6 +168,24 @@ namespace MassTransit.AzureServiceBusTransport
         }
 
         public static async Task<SubscriptionDescription> CreateTopicSubscriptionSafeAsync(this NamespaceManager namespaceManager, string subscriptionName,
+            string topicPath, string queuePath, QueueDescription queueDescription, int retry = 0)
+        {
+            try
+            {
+                return await CreateTopicSubscriptionAsync(namespaceManager, subscriptionName, topicPath, queuePath, queueDescription);
+            }
+            catch (MessagingException mex)
+            {
+                if (mex.IsTransient && retry < 5)
+                {
+                    await Task.Delay(30 * (retry + 1));
+                    return await CreateTopicSubscriptionSafeAsync(namespaceManager, subscriptionName, topicPath, queuePath, queueDescription, retry + 1);
+                }
+                throw;
+            }
+        }
+
+        private static async Task<SubscriptionDescription> CreateTopicSubscriptionAsync(this NamespaceManager namespaceManager, string subscriptionName,
             string topicPath, string queuePath, QueueDescription queueDescription)
         {
             var description = Defaults.CreateSubscriptionDescription(topicPath, subscriptionName, queueDescription, queuePath);

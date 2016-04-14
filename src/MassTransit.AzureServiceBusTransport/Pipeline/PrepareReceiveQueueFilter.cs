@@ -22,6 +22,7 @@ namespace MassTransit.AzureServiceBusTransport.Pipeline
     using Contexts;
     using MassTransit.Pipeline;
     using Microsoft.ServiceBus;
+    using Microsoft.ServiceBus.Messaging;
     using NewIdFormatters;
 
 
@@ -71,19 +72,26 @@ namespace MassTransit.AzureServiceBusTransport.Pipeline
             string queuePath = Path.Combine(namespaceManager.Address.AbsoluteUri.TrimStart('/'), _settings.QueueDescription.Path)
                 .Replace('\\', '/');
 
-            var subscriptionName = GetSubscriptionName(namespaceManager, _settings.QueueDescription.Path);
+            var subscriptionName = GetSubscriptionName(namespaceManager, _settings.QueueDescription.Path, topicDescription);
 
             await rootNamespaceManager.CreateTopicSubscriptionSafeAsync(subscriptionName, topicDescription.Path, queuePath, _settings.QueueDescription)
                 .ConfigureAwait(false);
         }
 
-        static string GetSubscriptionName(NamespaceManager namespaceManager, string queuePath)
+        static string GetSubscriptionName(NamespaceManager namespaceManager, string queuePath, TopicDescription topic)
         {
-            string subscriptionPath = queuePath;
+            string topicPath = topic.Path;
+            var slashIndex = topicPath.LastIndexOf('/');
+            if (slashIndex >= 0 && (slashIndex +1 ) < topicPath.Length)
+            {
+                topicPath = topicPath.Substring(slashIndex + 1);
+            }
+
+            string subscriptionPath = $"{queuePath}-{topicPath}";
 
             string suffix = namespaceManager.Address.AbsolutePath.Split(new[] {'/'}, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
             if (!string.IsNullOrEmpty(suffix))
-                subscriptionPath = $"{queuePath}-{suffix}";
+                subscriptionPath = $"{queuePath}-{suffix}-{topicPath}";
 
             string name;
             if (subscriptionPath.Length > 50)
