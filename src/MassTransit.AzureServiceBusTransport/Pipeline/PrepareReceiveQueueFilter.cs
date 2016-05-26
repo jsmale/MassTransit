@@ -56,13 +56,12 @@ namespace MassTransit.AzureServiceBusTransport.Pipeline
             {
                 NamespaceManager rootNamespaceManager = await context.RootNamespaceManager.ConfigureAwait(false);
 
-                // create subscriptions one at a time instead of concurrently and only one per topic
+                // create one subscription per topic
                 var topicPaths = _subscriptionSettings.Select(x => x.Topic.Path).Distinct().ToArray();
-                foreach (var topicPath in topicPaths)
-                {
-                    var subscription = _subscriptionSettings.First(x => x.Topic.Path == topicPath);
-                    await CreateSubscription(rootNamespaceManager, namespaceManager, subscription).ConfigureAwait(false);
-                }
+
+                await Task.WhenAll(topicPaths.Select(topicPath => 
+                    CreateSubscription(rootNamespaceManager, namespaceManager, 
+                        _subscriptionSettings.First(x => x.Topic.Path == topicPath)))).ConfigureAwait(false);
             }
 
             context.GetOrAddPayload(() => _settings);
