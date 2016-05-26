@@ -70,10 +70,12 @@ namespace MassTransit.RabbitMqTransport.Tests
                 Timestamp = DateTime.UtcNow
             });
 
-            await client.Request(request, TestCancellationToken);
+            var concurrencyLimitUpdated = await client.Request(request, TestCancellationToken);
+
+            Assert.AreEqual(request.ConcurrencyLimit, concurrencyLimitUpdated.ConcurrencyLimit);
         }
 
-        [Test]
+        [Test, Explicit]
         public async Task Should_allow_reconfiguration_of_prefetch_count()
         {
             IRequestClient<SetPrefetchCount, PrefetchCountUpdated> client = new PublishRequestClient<SetPrefetchCount, PrefetchCountUpdated>(Bus,

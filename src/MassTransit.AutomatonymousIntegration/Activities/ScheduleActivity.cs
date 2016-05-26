@@ -68,14 +68,14 @@ namespace Automatonymous.Activities
             await next.Execute(context).ConfigureAwait(false);
         }
 
-        async Task Activity<TInstance>.Faulted<TException>(BehaviorExceptionContext<TInstance, TException> context, Behavior<TInstance> next)
+        Task Activity<TInstance>.Faulted<TException>(BehaviorExceptionContext<TInstance, TException> context, Behavior<TInstance> next)
         {
-            await next.Faulted(context).ConfigureAwait(false);
+            return next.Faulted(context);
         }
 
-        async Task Activity<TInstance>.Faulted<T, TException>(BehaviorExceptionContext<TInstance, T, TException> context, Behavior<TInstance, T> next)
+        Task Activity<TInstance>.Faulted<T, TException>(BehaviorExceptionContext<TInstance, T, TException> context, Behavior<TInstance, T> next)
         {
-            await next.Faulted(context).ConfigureAwait(false);
+            return next.Faulted(context);
         }
 
         async Task Execute(BehaviorContext<TInstance> context)
@@ -90,7 +90,7 @@ namespace Automatonymous.Activities
 
             var delay = _delayProvider(consumeContext);
 
-            ScheduledMessage<TMessage> scheduledMessage = await schedulerContext.ScheduleSend(message, delay, _sendPipe).ConfigureAwait(false);
+            ScheduledMessage<TMessage> scheduledMessage = await schedulerContext.ScheduleSend(delay, message, _sendPipe).ConfigureAwait(false);
 
             Guid? previousTokenId = _schedule.GetTokenId(context.Instance);
             if (previousTokenId.HasValue)
@@ -148,7 +148,7 @@ namespace Automatonymous.Activities
 
             var delay = _delayProvider(consumeContext);
 
-            ScheduledMessage<TMessage> scheduledMessage = await schedulerContext.ScheduleSend(message, delay, _sendPipe).ConfigureAwait(false);
+            ScheduledMessage<TMessage> scheduledMessage = await schedulerContext.ScheduleSend(delay, message, _sendPipe).ConfigureAwait(false);
 
             Guid? previousTokenId = _schedule.GetTokenId(context.Instance);
             if (previousTokenId.HasValue)
@@ -161,10 +161,10 @@ namespace Automatonymous.Activities
             await next.Execute(context).ConfigureAwait(false);
         }
 
-        async Task Activity<TInstance, TData>.Faulted<TException>(BehaviorExceptionContext<TInstance, TData, TException> context,
+        Task Activity<TInstance, TData>.Faulted<TException>(BehaviorExceptionContext<TInstance, TData, TException> context,
             Behavior<TInstance, TData> next)
         {
-            await next.Faulted(context).ConfigureAwait(false);
+            return next.Faulted(context);
         }
     }
 }

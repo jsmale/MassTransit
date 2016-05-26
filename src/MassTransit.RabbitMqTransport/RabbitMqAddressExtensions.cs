@@ -187,6 +187,11 @@ namespace MassTransit.RabbitMqTransport
                 yield return "type=" + settings.ExchangeType;
             if (settings.ExchangeArguments != null && settings.ExchangeArguments.ContainsKey("x-delayed-type"))
                 yield return "delayedType=" + settings.ExchangeArguments["x-delayed-type"];
+
+            foreach (var binding in settings.ExchangeBindings)
+            {
+                yield return $"bindexchange={binding.Exchange.ExchangeName}";
+            }
         }
 
         public static ReceiveSettings GetReceiveSettings(this Uri address)
@@ -301,21 +306,29 @@ namespace MassTransit.RabbitMqTransport
             if (!string.IsNullOrWhiteSpace(delayedType))
                 settings.SetExchangeArgument("x-delayed-type", delayedType);
 
+            string bindExchange = address.Query.GetValueFromQueryString("bindexchange");
+            if (!string.IsNullOrWhiteSpace(bindExchange))
+                settings.BindToExchange(bindExchange);
+
             return settings;
         }
 
+        [Obsolete]
         public static SendSettings GetSendSettings(this IRabbitMqHost host, Type messageType)
+        {
+            return GetSendSettings(host.Settings, messageType);
+        }
+
+        public static SendSettings GetSendSettings(this RabbitMqHostSettings hostSettings, Type messageType)
         {
             bool isTemporary = messageType.IsTemporaryMessageType();
 
             bool durable = !isTemporary;
             bool autoDelete = isTemporary;
 
-            string name = host.MessageNameFormatter.GetMessageName(messageType).ToString();
+            string name = hostSettings.MessageNameFormatter.GetMessageName(messageType).ToString();
 
-            SendSettings settings = new RabbitMqSendSettings(name, ExchangeType.Fanout, durable, autoDelete);
-
-            return settings;
+            return new RabbitMqSendSettings(name, ExchangeType.Fanout, durable, autoDelete);
         }
 
         public static ConnectionFactory GetConnectionFactory(this RabbitMqHostSettings settings)

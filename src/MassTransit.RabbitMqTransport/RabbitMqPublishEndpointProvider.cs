@@ -65,7 +65,7 @@ namespace MassTransit.RabbitMqTransport
 
         public async Task<ISendEndpoint> GetPublishSendEndpoint(Type messageType)
         {
-            Cached<ISendEndpoint> cached = _cache.Get(messageType);
+            Cached<ISendEndpoint> cached = await _cache.Get(messageType).ConfigureAwait(false);
 
             var endpoint = await cached.Value.ConfigureAwait(false);
 
@@ -94,10 +94,10 @@ namespace MassTransit.RabbitMqTransport
 
         Task<ISendEndpoint> CreateSendEndpoint(Type messageType)
         {
-            var sendSettings = _host.GetSendSettings(messageType);
+            var sendSettings = _host.Settings.GetSendSettings(messageType);
 
             ExchangeBindingSettings[] bindings = TypeMetadataCache.GetMessageTypes(messageType)
-                .SelectMany(type => type.GetExchangeBindings(_host.MessageNameFormatter))
+                .SelectMany(type => type.GetExchangeBindings(_host.Settings.MessageNameFormatter))
                 .Where(binding => !sendSettings.ExchangeName.Equals(binding.Exchange.ExchangeName))
                 .ToArray();
 

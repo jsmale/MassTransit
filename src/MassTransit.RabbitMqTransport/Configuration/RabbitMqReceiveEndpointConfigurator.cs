@@ -21,6 +21,7 @@ namespace MassTransit.RabbitMqTransport.Configuration
     using MassTransit.Builders;
     using MassTransit.Configurators;
     using MassTransit.Pipeline;
+    using MassTransit.Pipeline.Pipes;
     using Topology;
     using Transports;
     using Util;
@@ -32,7 +33,7 @@ namespace MassTransit.RabbitMqTransport.Configuration
         IBusFactorySpecification
     {
         readonly IRabbitMqHost _host;
-        readonly Mediator<ISetPrefetchCount> _mediator;
+        readonly IManagementPipe _managementPipe;
         readonly RabbitMqReceiveSettings _settings;
         readonly List<ExchangeBindingSettings> _exchangeBindings;
         bool _bindMessageExchanges;
@@ -49,7 +50,7 @@ namespace MassTransit.RabbitMqTransport.Configuration
                 QueueName = queueName,
             };
 
-            _mediator = new Mediator<ISetPrefetchCount>();
+            _managementPipe = new ManagementPipe();
             _exchangeBindings = new List<ExchangeBindingSettings>();
         }
 
@@ -60,7 +61,7 @@ namespace MassTransit.RabbitMqTransport.Configuration
 
             _settings = settings;
 
-            _mediator = new Mediator<ISetPrefetchCount>();
+            _managementPipe = new ManagementPipe();
             _exchangeBindings = new List<ExchangeBindingSettings>();
         }
 
@@ -80,7 +81,7 @@ namespace MassTransit.RabbitMqTransport.Configuration
             RabbitMqReceiveEndpointBuilder endpointBuilder = null;
             var receivePipe = CreateReceivePipe(builder, consumePipe =>
             {
-                endpointBuilder = new RabbitMqReceiveEndpointBuilder(consumePipe, _host.MessageNameFormatter, _bindMessageExchanges);
+                endpointBuilder = new RabbitMqReceiveEndpointBuilder(consumePipe, _host.Settings.MessageNameFormatter, _bindMessageExchanges);
 
                 endpointBuilder.AddExchangeBindings(_exchangeBindings.ToArray());
 
@@ -90,7 +91,7 @@ namespace MassTransit.RabbitMqTransport.Configuration
             if (endpointBuilder == null)
                 throw new InvalidOperationException("The endpoint builder was not initialized");
 
-            var transport = new RabbitMqReceiveTransport(_host, _settings, _mediator, endpointBuilder.GetExchangeBindings().ToArray());
+            var transport = new RabbitMqReceiveTransport(_host, _settings, _managementPipe, endpointBuilder.GetExchangeBindings().ToArray());
 
             builder.AddReceiveEndpoint(_settings.QueueName ?? NewId.Next().ToString(), new ReceiveEndpoint(transport, receivePipe));
         }
@@ -172,7 +173,7 @@ namespace MassTransit.RabbitMqTransport.Configuration
 
         public void ConnectManagementEndpoint(IManagementEndpointConfigurator management)
         {
-            var consumer = new SetPrefetchCountManagementConsumer(_mediator, _settings.QueueName);
+            var consumer = new SetPrefetchCountManagementConsumer(_managementPipe, _settings.QueueName);
             management.Instance(consumer);
         }
 
