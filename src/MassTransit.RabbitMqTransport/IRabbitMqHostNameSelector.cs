@@ -10,20 +10,17 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
-namespace MassTransit.Courier
+namespace MassTransit.RabbitMqTransport
 {
-    using System.Threading.Tasks;
+    using RabbitMQ.Client;
 
 
-    public interface CompensateActivity<in TLog> :
-        ICompensateActivity
-        where TLog : class
+    public interface IRabbitMqHostNameSelector :
+        IHostnameSelector
     {
         /// <summary>
-        /// Compensate the activity and return the remaining compensation items
+        /// Returns the last host selected by the selector
         /// </summary>
-        /// <param name="context">The compensation information for the activity</param>
-        /// <returns></returns>
-        Task<CompensationResult> Compensate(CompensateContext<TLog> context);
+        string LastHost { get; }
     }
 }

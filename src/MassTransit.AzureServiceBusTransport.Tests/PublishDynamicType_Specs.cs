@@ -10,20 +10,28 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
-namespace MassTransit.Courier
+namespace MassTransit.AzureServiceBusTransport.Tests
 {
     using System.Threading.Tasks;
+    using NUnit.Framework;
+    using TestFramework.Messages;
 
 
-    public interface CompensateActivity<in TLog> :
-        ICompensateActivity
-        where TLog : class
+    [TestFixture]
+    public class Publishing_an_anonymous_type :
+        AzureServiceBusTestFixture
     {
-        /// <summary>
-        /// Compensate the activity and return the remaining compensation items
-        /// </summary>
-        /// <param name="context">The compensation information for the activity</param>
-        /// <returns></returns>
-        Task<CompensationResult> Compensate(CompensateContext<TLog> context);
+        [Test]
+        public async Task Should_throw_a_proper_exception()
+        {
+            Assert.Throws<MessageException>(async () => await Bus.Publish(new {Value = "Name"}));
+        }
+
+        Task<ConsumeContext<PingMessage>> _handler;
+
+        protected override void ConfigureInputQueueEndpoint(IServiceBusReceiveEndpointConfigurator configurator)
+        {
+            _handler = Handled<PingMessage>(configurator);
+        }
     }
 }
